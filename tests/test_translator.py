@@ -1,4 +1,4 @@
-from translator import EnglishKoreanTranslator
+from src.translator import EnglishKoreanTranslator
 
 def test_translation():
     print("Initializing translator...")  # Debugging statement
