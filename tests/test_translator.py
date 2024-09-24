@@ -1,20 +1,14 @@
-from src.translator import EnglishKoreanTranslator
+from preprocessing.load_data import load_dataset
 
-def test_translation():
-    print("Initializing translator...")  # Debugging statement
-    translator = EnglishKoreanTranslator()
-    
-    print("Translating text...")  # Debugging statement
-    # Define a test sentence in English
-    english_text = "Hello, how are you?"
-    
-    # Translate the sentence to Korean
-    korean_translation = translator.translate(english_text)
-     
-    # Print the result
-    print(f"English: {english_text}")
-    print(f"Korean: {korean_translation}")
+def test_load_data():
+    # Load the sample dataset
+    eng_train, eng_val, kor_train, kor_val = load_dataset('data/sample_data.csv')
+
+    # Print the results to verify
+    print("English Training Sentences:", eng_train)
+    print("English Validation Sentences:", eng_val)
+    print("Korean Training Sentences:", kor_train)
+    print("Korean Validation Sentences:", kor_val)
 
 if __name__ == "__main__":
-    print("Running test...")  # Debugging statement
-    test_translation()
+    test_load_data()
