@@ -1,6 +1,53 @@
 # English-Korean Translator
 
-A sophisticated neural machine translation system that translates English text to Korean using sequence-to-sequence learning with attention mechanisms.
+A powerful and accurate English to Korean translation system built with state-of-the-art deep learning techniques. This project implements a sequence-to-sequence (Seq2Seq) model using TensorFlow and provides a user-friendly web interface through Flask.
+
+## 🌟 Features
+
+- High-accuracy English to Korean translation
+- Web-based interface for easy access
+- Built on TensorFlow 2.17.0 for optimal performance
+- Utilizes advanced neural network architectures
+- Real-time translation capabilities
+- Support for both short phrases and longer texts
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Python 3.8 or higher
+- pip (Python package installer)
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone hhttps://github.com/cyprienoudart/english-korean-translator.git
+cd english-korean-translator
+```
+
+2. Create a virtual environment (recommended):
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows, use: venv\Scripts\activate
+```
+
+3. Install the required dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+### Running the Application
+
+1. Start the Flask server:
+```bash
+python app.py
+```
+
+2. Open your web browser and navigate to:
+```
+http://localhost:5000
+```
 
 ## Overview
 
@@ -15,82 +62,41 @@ This project implements a deep learning-based translation system that converts E
 - Efficient tokenization and preprocessing for both languages
 - Support for batch translation
 
-## Technology Stack
+## 🛠️ Technical Stack
 
-- **Framework**: TensorFlow 2.17.0
-- **Neural Network**: Encoder-Decoder with GRU cells and Bahdanau Attention
-- **API Server**: Flask
-- **Data Processing**: Pandas, NumPy, NLTK
-- **Additional Tools**: TensorFlow Addons for advanced sequence-to-sequence utilities
+- **Backend Framework**: Flask 2.0.0+
+- **Deep Learning Framework**: TensorFlow 2.17.0
+- **Natural Language Processing**: NLTK 3.6.7+
+- **Data Processing**: NumPy 1.23.0+, Pandas 1.5.0+
+- **Machine Learning Utilities**: scikit-learn 0.24.2+
+- **Additional Features**: tensorflow-addons 0.18.0+
 
-## Installation
+## 📚 Model Architecture
 
-1. Clone the repository:
-   ```
-   git clone https://github.com/yourusername/english-korean-translator.git
-   cd english-korean-translator
-   ```
+The translation system uses a sophisticated Seq2Seq model with:
+- GRU (Gated Recurrent Unit) layers for sequence processing
+- Embedding layers for word representation
+- Attention mechanisms for improved translation accuracy
+- Custom tokenization and preprocessing pipeline
 
-2. Install the requirements:
-   ```
-   pip install -r requirements.txt
-   ```
+## 🤝 Contributing
 
-3. Download the pre-trained model or train your own.
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
 
-## Usage
+## 📝 License
 
-### Web API
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-Start the Flask server:
-```
+## 🙏 Acknowledgments
 
-Send translation requests:
-```
+- TensorFlow team for the excellent deep learning framework
+- NLTK team for the natural language processing tools
+- The open-source community for various libraries and tools used in this project
 
-### Training Your Own Model
+## 📧 Contact
 
-1. Prepare your dataset in CSV format
-2. Update the data path in the configuration
-3. Run the training script:
-   ```
-   python training/train.py
-   ```
+For any questions or suggestions, please open an issue in the GitHub repository.
 
-4. Monitor the training process and adjust hyperparameters as needed
+---
 
-## Model Architecture
-
-The translation system uses a sequence-to-sequence architecture:
-
-1. **Encoder**: Converts English sentences into context vectors
-2. **Attention Mechanism**: Helps the model focus on relevant parts of the source sentence
-3. **Decoder**: Generates Korean translations word by word
-
-The model employs GRU (Gated Recurrent Unit) cells for both encoder and decoder networks, with Bahdanau attention to improve translation quality.
-
-## Performance
-
-The model achieves high accuracy in translating common phrases and sentences, with particular strength in:
-- Everyday conversation
-- Business communication
-- Technical documentation
-
-## Future Development
-
-- Integration with mobile applications
-- Support for more language pairs
-- Implementation of Transformer architecture
-- Batch processing for large-scale translation tasks
-
-## License
-
-[Your chosen license]
-
-## Contributors
-
-[List of contributors]
-
-## Acknowledgments
-
-- [Any acknowledgments or credits]
+Made with ❤️ by Cyprien Oudart

@@ -1,8 +1,6 @@
 import tensorflow as tf
-import tensorflow_addons as tfa
-from tensorflow_addons.seq2seq import BasicDecoder, AttentionWrapper
-from tensorflow.keras.layers import Embedding, GRU, Dense
-from preprocessing.load_data import load_dataset
+from models.seq2seq_model import Seq2SeqModel
+import numpy as np
 
 # Load data
 (input_tensor_train, target_tensor_train), (input_tensor_val, target_tensor_val), tokenizer_eng, tokenizer_kor = load_dataset('data/korean_english_dataset.csv')
@@ -14,98 +12,81 @@ units = 1024
 vocab_inp_size = len(tokenizer_eng.word_index) + 1
 vocab_tar_size = len(tokenizer_kor.word_index) + 1
 
-# Define Encoder using TensorFlow/Keras API
-class Encoder(tf.keras.Model):
-    def __init__(self, vocab_size, embedding_dim, enc_units, batch_sz):
-        super(Encoder, self).__init__()
-        self.batch_sz = batch_sz
-        self.enc_units = enc_units
-        self.embedding = Embedding(vocab_size, embedding_dim)
-        self.gru = GRU(self.enc_units,
-                       return_sequences=True,
-                       return_state=True,
-                       recurrent_initializer='glorot_uniform')
-
-    def call(self, x, hidden):
-        x = self.embedding(x)
-        output, state = self.gru(x, initial_state=hidden)
-        return output, state
-
-    def initialize_hidden_state(self):
-        return tf.zeros((self.batch_sz, self.enc_units))
-
-# Define Decoder using TensorFlow/Keras API
-class Decoder(tf.keras.Model):
-    def __init__(self, vocab_size, embedding_dim, dec_units, batch_sz):
-        super(Decoder, self).__init__()
-        self.batch_sz = batch_sz
-        self.dec_units = dec_units
-        self.embedding = Embedding(vocab_size, embedding_dim)
-        self.gru = GRU(self.dec_units,
-                       return_sequences=True,
-                       return_state=True,
-                       recurrent_initializer='glorot_uniform')
-        self.fc = Dense(vocab_size)
-
-        # For attention mechanism
-        self.attention = tfa.seq2seq.BahdanauAttention(self.dec_units)
-
-    def call(self, x, hidden, enc_output):
-        # Apply attention
-        context_vector, attention_weights = self.attention(hidden, enc_output)
-
-        # Embedding
-        x = self.embedding(x)
-
-        # Concatenate context vector and embedding input
-        x = tf.concat([tf.expand_dims(context_vector, 1), x], axis=-1)
-
-        # GRU
-        output, state = self.gru(x)
-
-        # Dense output layer
-        output = tf.reshape(output, (-1, output.shape[2]))
-        x = self.fc(output)
-
-        return x, state
-
-# Instantiate Encoder and Decoder
-encoder = Encoder(vocab_inp_size, embedding_dim, units, BATCH_SIZE)
-decoder = Decoder(vocab_tar_size, embedding_dim, units, BATCH_SIZE)
-
-# Optimizer and Loss function
-optimizer = tf.keras.optimizers.Adam()
-loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-
-def loss_function(real, pred):
-    mask = tf.math.logical_not(tf.math.equal(real, 0))
-    loss_ = loss_object(real, pred)
-    mask = tf.cast(mask, dtype=loss_.dtype)
-    loss_ *= mask
-    return tf.reduce_mean(loss_)
-
-# Training loop
-EPOCHS = 10
-
-for epoch in range(EPOCHS):
-    total_loss = 0
-    for (batch, (input_tensor, target_tensor)) in enumerate(zip(input_tensor_train, target_tensor_train)):
+class TranslationTrainer:
+    def __init__(self,
+                 model,
+                 learning_rate=0.001,
+                 batch_size=64):
+        """
+        Initialize the trainer
+        
+        Args:
+            model: Seq2Seq model instance
+            learning_rate (float): Learning rate for optimizer
+            batch_size (int): Batch size for training
+        """
+        self.model = model
+        self.batch_size = batch_size
+        
+        # Initialize optimizer
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+        
+        # Initialize loss function
+        self.loss_object = tf.keras.losses.SparseCategoricalCrossentropy(
+            from_logits=False
+        )
+        
+    def loss_function(self, real, pred):
+        """Calculate loss with masking for padding"""
+        mask = tf.math.logical_not(tf.math.equal(real, 0))
+        loss_ = self.loss_object(real, pred)
+        mask = tf.cast(mask, dtype=loss_.dtype)
+        loss_ *= mask
+        return tf.reduce_mean(loss_)
+    
+    @tf.function
+    def train_step(self, encoder_input, decoder_input, target):
+        """Single training step"""
         with tf.GradientTape() as tape:
-            enc_hidden = encoder.initialize_hidden_state()
-            enc_output, enc_hidden = encoder(input_tensor, enc_hidden)
-
-            dec_hidden = enc_hidden
-            dec_input = tf.expand_dims([tokenizer_kor.word_index['<start>']] * BATCH_SIZE, 1)
-
-            # Teacher forcing: Feed the target as the next input
-            for t in range(1, target_tensor.shape[1]):
-                predictions, dec_hidden = decoder(dec_input, dec_hidden, enc_output)
-                loss = loss_function(target_tensor[:, t], predictions)
-
+            # Forward pass
+            predictions = self.model([encoder_input, decoder_input])
+            
+            # Calculate loss
+            loss = self.loss_function(target, predictions)
+            
+        # Calculate gradients
+        gradients = tape.gradient(loss, self.model.trainable_variables)
+        
+        # Apply gradients
+        self.optimizer.apply_gradients(
+            zip(gradients, self.model.trainable_variables)
+        )
+        
+        return loss
+    
+    def train(self, dataset, epochs):
+        """Train the model"""
+        for epoch in range(epochs):
+            total_loss = 0
+            num_batches = 0
+            
+            for batch, (encoder_input, decoder_input, target) in enumerate(dataset):
+                loss = self.train_step(encoder_input, decoder_input, target)
                 total_loss += loss
-                dec_input = tf.expand_dims(target_tensor[:, t], 1)  # Teacher forcing
+                num_batches += 1
+                
+                if batch % 100 == 0:
+                    print(f'Epoch {epoch+1}, Batch {batch}, Loss: {loss:.4f}')
+            
+            avg_loss = total_loss / num_batches
+            print(f'Epoch {epoch+1}, Average Loss: {avg_loss:.4f}')
 
-        gradients = tape.gradient(total_loss, encoder.trainable_variables + decoder.trainable_variables)
-        optimizer.apply_gradients(zip(gradients, encoder.trainable_variables + decoder.trainable_variables))
+# Instantiate Seq2Seq model
+model = Seq2SeqModel(vocab_inp_size, vocab_tar_size, embedding_dim, units)
 
-    print(f'Epoch {epoch+1}, Loss: {total_loss.numpy():.4f}')
+# Create TranslationTrainer instance
+trainer = TranslationTrainer(model)
+
+# Train the model
+EPOCHS = 10
+trainer.train((input_tensor_train, target_tensor_train), EPOCHS)

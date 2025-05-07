@@ -1,31 +1,76 @@
-from flask import Flask, request, jsonify
-import tensorflow as tf
-from preprocessing.load_data import load_dataset
-from models.seq2seq import Seq2SeqModel
+from flask import Flask, request, jsonify, render_template
+import os
+import sys
+
+# Add parent directory to path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from models.translator import Translator
 
 app = Flask(__name__)
 
-# Load the model and tokenizers
-model = Seq2SeqModel()
-(input_tensor_train, target_tensor_train), (input_tensor_val, target_tensor_val), tokenizer_eng, tokenizer_kor = load_dataset('data/korean_english_dataset.csv')
+# Load translator
+translator = None
+
+@app.route('/')
+def index():
+    """Render index page"""
+    return render_template('index.html')
 
 @app.route('/translate', methods=['POST'])
 def translate():
-    data = request.json
-    english_sentence = data['sentence']
+    """API endpoint for translation"""
+    # Get text from request
+    data = request.get_json()
+    text = data.get('text', '')
+    
+    if not text:
+        return jsonify({"error": "No text provided"}), 400
+    
+    # Translate text
+    try:
+        translation = translator.translate(text)
+        return jsonify({"translation": translation})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-    # Tokenize and pad the English sentence
-    input_seq = tokenizer_eng.texts_to_sequences([english_sentence])
-    input_seq = tf.keras.preprocessing.sequence.pad_sequences(input_seq, maxlen=input_tensor_train.shape[1], padding='post')
+@app.route('/health')
+def health():
+    """Health check endpoint"""
+    return jsonify({"status": "ok"})
 
-    # Predict the translation using the model
-    prediction = model.evaluate(input_seq)
-    predicted_seq = tf.argmax(prediction, axis=-1)
-
-    # Convert the prediction back to words
-    korean_translation = ' '.join([tokenizer_kor.index_word[i] for i in predicted_seq[0] if i != 0])
-
-    return jsonify({'translation': korean_translation})
+def load_translator(model_path, eng_tokenizer_path, kor_tokenizer_path):
+    """Load translator model"""
+    global translator
+    translator = Translator(
+        model_path=model_path,
+        eng_tokenizer_path=eng_tokenizer_path,
+        kor_tokenizer_path=kor_tokenizer_path
+    )
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Start translation API server')
+    parser.add_argument('--model_path', type=str, required=True,
+                        help='Path to saved model')
+    parser.add_argument('--eng_tokenizer_path', type=str, required=True,
+                        help='Path to English tokenizer')
+    parser.add_argument('--kor_tokenizer_path', type=str, required=True,
+                        help='Path to Korean tokenizer')
+    parser.add_argument('--host', type=str, default='0.0.0.0',
+                        help='Host to run server on')
+    parser.add_argument('--port', type=int, default=5000,
+                        help='Port to run server on')
+    
+    args = parser.parse_args()
+    
+    # Load translator
+    load_translator(
+        model_path=args.model_path,
+        eng_tokenizer_path=args.eng_tokenizer_path,
+        kor_tokenizer_path=args.kor_tokenizer_path
+    )
+    
+    # Start server
+    app.run(host=args.host, port=args.port)
